@@ -1,0 +1,12 @@
+.gradle/
+build/
+app/build/
+local.properties
+*.iml
+.idea/
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+curbrun-screenshot*.png
+curbrun-crash-log*.txt
+ui-curbrun*.xml
