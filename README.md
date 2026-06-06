@@ -18,11 +18,12 @@ It ranks streets by closest-first legal fit, then availability risk. The app is 
 - Empty-result recovery card gives one-tap shorter-window and wider-radius retries when a free-only search is too constrained.
 - Confidence tiers label each result as strong, sign-check-required, or high-competition based on availability and risk factors.
 - Candidate cards carry curb-source provenance, including bundled SFMTA Digital Curb segments.
+- Real surveyed curb capacity from the SFMTA on-street parking census: candidates show the measured number of spaces on the blockface, and that capacity nudges the availability estimate.
 - Accessibility semantics label the map, controls, route stops, candidate cards, confidence dials, and navigation actions for TalkBack/UI-tree QA.
 - Closest-first ranking with availability/risk penalties.
 - Greedy multi-stop search route over the best legal candidates, with Google Maps directions handoff.
 - Bundled SQLite curb database loaded from APK assets, with Kotlin seed data only as fallback.
-- Reproducible data pipeline in `scripts/build_curb_db.py` for SFMTA Digital Curb plus street-cleaning, time-limit/RPP, other regulation, metered blockface, and color-curb overlays.
+- Reproducible data pipeline in `scripts/build_curb_db.py` for SFMTA Digital Curb plus street-cleaning, time-limit/RPP, other regulation, metered blockface, and color-curb overlays, plus a real parking-census capacity overlay (`scripts/attach_capacity.py`).
 
 ## Build
 
@@ -50,7 +51,7 @@ Full local verification:
 
 CI is configured in `.github/workflows/android.yml` to validate the bundled curb database, run the data-pipeline unit tests, build the debug APK, run unit tests, run lint, and upload APK/lint/database artifacts.
 
-The Kotlin unit test suite covers legal-window blocking, paid-meter exclusion, radius filtering, closest-first ranking, availability tie-breaking, confidence tiers, curb-clock labels, route planning, bundled-asset polyline/day parsing, modeled-density risk flagging, selection preservation, and SF search anchors. A separate Python suite (`scripts/test_build_curb_db.py`) covers the data-pipeline clock/day/geometry parsers.
+The Kotlin unit test suite covers legal-window blocking, paid-meter exclusion, radius filtering, closest-first ranking, availability tie-breaking, confidence tiers, curb-clock labels, route planning, bundled-asset polyline/day parsing, modeled-density risk flagging, measured-capacity availability and census provenance, selection preservation, and SF search anchors. A separate Python suite (`scripts/test_build_curb_db.py`, `scripts/test_attach_capacity.py`) covers the data-pipeline clock/day/geometry parsers, the availability-scoring model, and the parking-census spatial join.
 
 Every Kotlin unit test is pure-JVM (the `domain` package plus `CurbAssetParsing`, with no Android framework), so `scripts/run_unit_tests_offline.sh` can compile and run the whole suite using the Kotlin compiler and JUnit jars bundled with any local Gradle 8.x install — verifying the core logic without an Android SDK, network, or CI. The canonical gate remains `./gradlew testDebugUnitTest`.
 
@@ -62,7 +63,7 @@ Build a generated SQLite curb database:
 py scripts/build_curb_db.py --out app/src/main/assets/curbrun.sqlite --limit 5000 --overlay-limit 8000
 ```
 
-The bundled asset currently contains thousands of SFMTA curb policies and attached overlay rules. Availability, traffic-pressure, and curb-density scores are transparent modeled heuristics derived from the density of nearby regulations, not measured occupancy, so they signal relative competition rather than a guaranteed open space. Real measured occupancy/capacity (for example Street View-derived) remains the next major model upgrade. The seam for it is intentionally narrow: such a feed plugs into the same `curb_segment` availability/traffic/density columns by replacing `recompute_availability` in `scripts/build_curb_db.py`, and the app reads those columns unchanged — no schema, ranking, or UI change required.
+The bundled asset currently contains thousands of SFMTA curb policies and attached overlay rules. Availability, traffic-pressure, and curb-density scores are transparent modeled heuristics derived from the density of nearby regulations, not measured occupancy, so they signal relative competition rather than a guaranteed open space. Measured curb **capacity** is now real: `scripts/attach_capacity.py` joins the SFMTA on-street parking census (surveyed `prkg_sply` per blockface) onto each segment's `measured_spaces` column, which the app surfaces as provenance and folds into the availability estimate. Live **occupancy** — how many of those spaces are taken at any moment — has no public real-time feed for SF residential curbs and remains the next upgrade; its seam is narrow, since such a feed would write the same `curb_segment` columns with no schema or UI change.
 
 ## Product Bar
 

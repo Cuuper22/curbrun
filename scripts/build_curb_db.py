@@ -102,7 +102,8 @@ def init_db(path: Path) -> sqlite3.Connection:
             traffic_pressure real not null,
             parked_car_density real not null,
             source text not null,
-            updated_at text
+            updated_at text,
+            measured_spaces integer
         );
 
         create table curb_rule (
@@ -235,7 +236,10 @@ def digital_curb_to_db(conn: sqlite3.Connection, limit: int | None) -> list[Segm
 
         conn.execute(
             """
-            insert or replace into curb_segment values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            insert or replace into curb_segment
+                (id, street, cross_street, latitude, longitude, polyline_json, parkable_feet,
+                 base_availability, traffic_pressure, parked_car_density, source, updated_at)
+            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 segment_id,
@@ -546,6 +550,13 @@ def main() -> None:
         "built_at_unix": int(time.time()),
     }
     recompute_availability(conn)
+    try:
+        import attach_capacity
+        census_rows = attach_capacity.fetch_census()
+        metadata["parking_census_matches"] = attach_capacity.enrich(conn, census_rows)
+        metadata["parking_census_source"] = attach_capacity.CENSUS_SOURCE
+    except Exception as exc:  # capacity overlay is optional / network-dependent
+        metadata["parking_census_matches"] = f"skipped: {exc}"
     store_metadata(conn, metadata)
     conn.close()
     print(f"built {args.out}")

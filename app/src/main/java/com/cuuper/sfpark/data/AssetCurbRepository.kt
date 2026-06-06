@@ -55,7 +55,8 @@ class AssetCurbRepository(private val context: Context) {
             val cursor = it.rawQuery(
                 """
                 select id, street, cross_street, latitude, longitude, polyline_json,
-                       parkable_feet, base_availability, traffic_pressure, parked_car_density, source
+                       parkable_feet, base_availability, traffic_pressure, parked_car_density, source,
+                       measured_spaces
                 from curb_segment
                 """.trimIndent(),
                 null
@@ -77,7 +78,8 @@ class AssetCurbRepository(private val context: Context) {
                         trafficPressure = cursor.getDouble(8),
                         parkedCarDensity = cursor.getDouble(9),
                         rules = rulesBySegment[id] ?: listOf(ParkingRule(RuleKind.FreeParking, label = "Free curb policy.")),
-                        source = cursor.getString(10) ?: "sfmta_digital_curb"
+                        source = cursor.getString(10) ?: "sfmta_digital_curb",
+                        measuredSpaces = if (cursor.isNull(11)) null else cursor.getInt(11)
                     )
                 }
                 return rows

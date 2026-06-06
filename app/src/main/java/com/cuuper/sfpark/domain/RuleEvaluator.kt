@@ -17,6 +17,7 @@ class RuleEvaluator {
 
         val estimatedSpaces = max(1, segment.parkableFeet / query.vehicleProfile.minimumFeet)
         reasons += "${segment.parkableFeet} ft usable curb, about $estimatedSpaces ${query.vehicleProfile.label.lowercase()} space(s)."
+        segment.measuredSpaces?.let { reasons += "SFMTA on-street census: about $it surveyed space(s) on this blockface." }
 
         for (rule in segment.rules) {
             val active = rule.window?.overlaps(query.start, end) ?: true

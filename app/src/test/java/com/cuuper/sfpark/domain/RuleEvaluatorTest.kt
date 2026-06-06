@@ -172,6 +172,28 @@ class RuleEvaluatorTest {
         assertTrue(allowed.riskFactors.none { it.contains("Modeled curb density") })
     }
 
+    @Test
+    fun surfacesMeasuredCensusCapacityWhenPresent() {
+        val segment = segmentWithDensity(0.2).copy(measuredSpaces = 24)
+        val query = queryAt("2026-06-01T08:00:00", hours = 1.0)
+
+        val result = evaluator.evaluate(segment, query)
+
+        assertTrue(result is Eligibility.Allowed)
+        assertTrue((result as Eligibility.Allowed).reasons.any { it.contains("surveyed space") })
+    }
+
+    @Test
+    fun omitsCensusReasonWhenCapacityAbsent() {
+        val segment = segmentWithDensity(0.2)
+        val query = queryAt("2026-06-01T08:00:00", hours = 1.0)
+
+        val result = evaluator.evaluate(segment, query)
+
+        assertTrue(result is Eligibility.Allowed)
+        assertTrue((result as Eligibility.Allowed).reasons.none { it.contains("surveyed space") })
+    }
+
     private fun segmentWithDensity(density: Double, vararg rules: ParkingRule): CurbSegment {
         return CurbSegment(
             id = "density",
