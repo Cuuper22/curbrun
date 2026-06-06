@@ -8,6 +8,7 @@ Run with: python3 -m unittest discover -s scripts -p "test_*.py"
 
 from __future__ import annotations
 
+import sqlite3
 import sys
 import unittest
 from pathlib import Path
@@ -111,6 +112,61 @@ class GeometryHelpersTest(unittest.TestCase):
 
     def test_distance_miles_is_zero_for_identical_points(self):
         self.assertAlmostEqual(b.distance_miles(37.77, -122.41, 37.77, -122.41), 0.0)
+
+
+class RecomputeAvailabilityTest(unittest.TestCase):
+    def _conn_with_rules(self, kinds: list[str]) -> sqlite3.Connection:
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(
+            """
+            create table curb_segment (id text primary key, street text, cross_street text,
+                latitude real, longitude real, polyline_json text, parkable_feet integer,
+                base_availability real, traffic_pressure real, parked_car_density real,
+                source text, updated_at text);
+            create table curb_rule (id integer primary key autoincrement, segment_id text,
+                kind text, days_json text, start_minute integer, end_minute integer,
+                max_stay_minutes integer, label text);
+            """
+        )
+        conn.execute(
+            "insert into curb_segment values ('s1','St',null,37.77,-122.41,'[]',100,0,0,0,'sfmta_digital_curb','')"
+        )
+        for kind in kinds:
+            conn.execute("insert into curb_rule(segment_id, kind, label) values ('s1', ?, ?)", (kind, kind))
+        conn.commit()
+        return conn
+
+    def _scores(self, conn: sqlite3.Connection) -> tuple[float, float, float]:
+        return conn.execute(
+            "select base_availability, traffic_pressure, parked_car_density from curb_segment where id='s1'"
+        ).fetchone()
+
+    def test_scores_match_the_documented_formula(self):
+        conn = self._conn_with_rules(["PaidMeter", "ResidentialPermit", "NoParking"])
+        b.recompute_availability(conn)
+        avail, pressure, density = self._scores(conn)
+
+        # paid=1, limited=1, hard=1
+        exp_pressure = min(0.95, 0.34 + 1 * 0.07 + 1 * 0.04 + 1 * 0.025)
+        exp_density = min(0.95, 0.42 + exp_pressure * 0.28)
+        exp_avail = max(0.12, 0.82 - exp_pressure * 0.36 - exp_density * 0.14)
+        self.assertAlmostEqual(pressure, exp_pressure)
+        self.assertAlmostEqual(density, exp_density)
+        self.assertAlmostEqual(avail, exp_avail)
+
+    def test_scores_stay_within_unit_range_under_heavy_regulation(self):
+        conn = self._conn_with_rules(["PaidMeter"] * 30 + ["NoParking"] * 30)
+        b.recompute_availability(conn)
+        for value in self._scores(conn):
+            self.assertGreaterEqual(value, 0.0)
+            self.assertLessEqual(value, 1.0)
+
+    def test_free_segment_is_more_available_than_heavily_regulated(self):
+        free = self._conn_with_rules(["FreeParking"])
+        regulated = self._conn_with_rules(["PaidMeter", "NoParking", "TowAway"])
+        b.recompute_availability(free)
+        b.recompute_availability(regulated)
+        self.assertGreater(self._scores(free)[0], self._scores(regulated)[0])
 
 
 if __name__ == "__main__":
