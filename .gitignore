@@ -12,3 +12,4 @@ curbrun-crash-log*.txt
 ui-curbrun*.xml
 __pycache__/
 *.pyc
+.kotlin/
