@@ -50,7 +50,7 @@ Full local verification:
 
 CI is configured in `.github/workflows/android.yml` to validate the bundled curb database, run the data-pipeline unit tests, build the debug APK, run unit tests, run lint, and upload APK/lint/database artifacts.
 
-The Kotlin unit test suite covers legal-window blocking, paid-meter exclusion, radius filtering, closest-first ranking, availability tie-breaking, confidence tiers, curb-clock labels, route planning, bundled-asset polyline/day parsing, and SF search anchors. A separate Python suite (`scripts/test_build_curb_db.py`) covers the data-pipeline clock/day/geometry parsers.
+The Kotlin unit test suite covers legal-window blocking, paid-meter exclusion, radius filtering, closest-first ranking, availability tie-breaking, confidence tiers, curb-clock labels, route planning, bundled-asset polyline/day parsing, modeled-density risk flagging, selection preservation, and SF search anchors. A separate Python suite (`scripts/test_build_curb_db.py`) covers the data-pipeline clock/day/geometry parsers.
 
 ## Data Pipeline
 

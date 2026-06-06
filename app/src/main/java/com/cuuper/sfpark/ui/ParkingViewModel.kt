@@ -14,6 +14,7 @@ import com.cuuper.sfpark.domain.SearchAnchor
 import com.cuuper.sfpark.domain.SearchRoutePlanner
 import com.cuuper.sfpark.domain.SearchRouteStop
 import com.cuuper.sfpark.domain.VehicleProfile
+import com.cuuper.sfpark.domain.resolveSelectedCandidate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -145,11 +146,11 @@ class ParkingViewModel(application: Application) : AndroidViewModel(application)
                 val ranked = ranker.rank(dataset.segments, query)
                 ranked to routePlanner.plan(snapshot.origin, ranked)
             }
-            val selected = if (preserveSelection) {
-                candidates.firstOrNull { it.segment.id == snapshot.selected?.segment?.id } ?: candidates.firstOrNull()
-            } else {
-                candidates.firstOrNull()
-            }
+            val selected = resolveSelectedCandidate(
+                candidates = candidates,
+                previousSelectedId = snapshot.selected?.segment?.id,
+                preserveSelection = preserveSelection
+            )
             _uiState.update {
                 it.copy(
                     candidates = candidates,

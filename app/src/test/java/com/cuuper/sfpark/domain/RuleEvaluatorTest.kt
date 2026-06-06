@@ -148,6 +148,45 @@ class RuleEvaluatorTest {
         assertNotNull(allowed.riskFactors.firstOrNull())
     }
 
+    @Test
+    fun flagsTightBlockWhenModeledDensityIsHigh() {
+        val segment = segmentWithDensity(0.7)
+        val query = queryAt("2026-06-01T08:00:00", hours = 1.0)
+
+        val result = evaluator.evaluate(segment, query)
+
+        assertTrue(result is Eligibility.Allowed)
+        val allowed = result as Eligibility.Allowed
+        assertTrue(allowed.riskFactors.any { it.contains("Modeled curb density") })
+    }
+
+    @Test
+    fun doesNotFlagDensityRiskBelowThreshold() {
+        val segment = segmentWithDensity(0.6)
+        val query = queryAt("2026-06-01T08:00:00", hours = 1.0)
+
+        val result = evaluator.evaluate(segment, query)
+
+        assertTrue(result is Eligibility.Allowed)
+        val allowed = result as Eligibility.Allowed
+        assertTrue(allowed.riskFactors.none { it.contains("Modeled curb density") })
+    }
+
+    private fun segmentWithDensity(density: Double, vararg rules: ParkingRule): CurbSegment {
+        return CurbSegment(
+            id = "density",
+            street = "Density St",
+            crossStreet = "near Test Ave",
+            center = LatLng(37.0, -122.0),
+            polyline = listOf(LatLng(37.0, -122.0), LatLng(37.0001, -122.0001)),
+            parkableFeet = 100,
+            baseAvailability = 0.7,
+            trafficPressure = 0.2,
+            parkedCarDensity = density,
+            rules = rules.toList()
+        )
+    }
+
     private fun segmentWith(vararg rules: ParkingRule): CurbSegment {
         return CurbSegment(
             id = "test",

@@ -196,6 +196,17 @@ def main() -> int:
     if "built_at_unix" not in metadata:
         failures.append("Missing build timestamp metadata")
 
+    declared_segments = metadata.get("digital_curb_segments")
+    if declared_segments is not None:
+        try:
+            if int(declared_segments) != segment_count:
+                failures.append(
+                    "digital_curb_segments metadata "
+                    f"({declared_segments}) does not match stored segment count ({segment_count})"
+                )
+        except ValueError:
+            failures.append(f"digital_curb_segments metadata is not an integer: {declared_segments!r}")
+
     report = {"ok": not failures, "failures": failures, "stats": stats}
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
