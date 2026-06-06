@@ -52,6 +52,8 @@ CI is configured in `.github/workflows/android.yml` to validate the bundled curb
 
 The Kotlin unit test suite covers legal-window blocking, paid-meter exclusion, radius filtering, closest-first ranking, availability tie-breaking, confidence tiers, curb-clock labels, route planning, bundled-asset polyline/day parsing, modeled-density risk flagging, selection preservation, and SF search anchors. A separate Python suite (`scripts/test_build_curb_db.py`) covers the data-pipeline clock/day/geometry parsers.
 
+Every Kotlin unit test is pure-JVM (the `domain` package plus `CurbAssetParsing`, with no Android framework), so `scripts/run_unit_tests_offline.sh` can compile and run the whole suite using the Kotlin compiler and JUnit jars bundled with any local Gradle 8.x install — verifying the core logic without an Android SDK, network, or CI. The canonical gate remains `./gradlew testDebugUnitTest`.
+
 ## Data Pipeline
 
 Build a generated SQLite curb database:
@@ -60,7 +62,7 @@ Build a generated SQLite curb database:
 py scripts/build_curb_db.py --out app/src/main/assets/curbrun.sqlite --limit 5000 --overlay-limit 8000
 ```
 
-The bundled asset currently contains thousands of SFMTA curb policies and attached overlay rules. Availability, traffic-pressure, and curb-density scores are transparent modeled heuristics derived from the density of nearby regulations, not measured occupancy, so they signal relative competition rather than a guaranteed open space. Real measured occupancy/capacity (for example Street View-derived) remains the next major model upgrade.
+The bundled asset currently contains thousands of SFMTA curb policies and attached overlay rules. Availability, traffic-pressure, and curb-density scores are transparent modeled heuristics derived from the density of nearby regulations, not measured occupancy, so they signal relative competition rather than a guaranteed open space. Real measured occupancy/capacity (for example Street View-derived) remains the next major model upgrade. The seam for it is intentionally narrow: such a feed plugs into the same `curb_segment` availability/traffic/density columns by replacing `recompute_availability` in `scripts/build_curb_db.py`, and the app reads those columns unchanged — no schema, ranking, or UI change required.
 
 ## Product Bar
 
