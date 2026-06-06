@@ -14,6 +14,8 @@ import com.cuuper.sfpark.domain.SearchAnchor
 import com.cuuper.sfpark.domain.SearchRoutePlanner
 import com.cuuper.sfpark.domain.SearchRouteStop
 import com.cuuper.sfpark.domain.VehicleProfile
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +23,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.LocalDateTime
 
@@ -57,6 +60,8 @@ class ParkingViewModel(application: Application) : AndroidViewModel(application)
         )
     )
     val uiState: StateFlow<ParkingUiState> = _uiState.asStateFlow()
+
+    private var rerankJob: Job? = null
 
     init {
         rerank(preserveSelection = false)
@@ -119,29 +124,41 @@ class ParkingViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Reranks candidates for the current query. The legality/ranking pass and
+     * the first (lazy) SQLite load run on [Dispatchers.Default] so the main
+     * thread stays free; the previous in-flight pass is cancelled so rapid
+     * slider changes and the live clock tick can't post stale results.
+     */
     private fun rerank(preserveSelection: Boolean) {
-        val state = _uiState.value
+        val snapshot = _uiState.value
         val query = ParkingQuery(
-            origin = state.origin,
+            origin = snapshot.origin,
             start = LocalDateTime.now(),
-            duration = Duration.ofMinutes((state.durationHours * 60).toLong()),
-            vehicleProfile = state.vehicleProfile,
-            radiusMiles = state.radiusMiles
+            duration = Duration.ofMinutes((snapshot.durationHours * 60).toLong()),
+            vehicleProfile = snapshot.vehicleProfile,
+            radiusMiles = snapshot.radiusMiles
         )
-        val candidates = ranker.rank(dataset.segments, query)
-        val selected = if (preserveSelection) {
-            candidates.firstOrNull { it.segment.id == state.selected?.segment?.id } ?: candidates.firstOrNull()
-        } else {
-            candidates.firstOrNull()
-        }
-        _uiState.update {
-            it.copy(
-                candidates = candidates,
-                routeStops = routePlanner.plan(state.origin, candidates),
-                selected = selected,
-                lastUpdatedLabel = "${dataset.label} • live curb clock",
-                error = if (candidates.isEmpty()) "No legal free curb segments found in this radius." else null
-            )
+        rerankJob?.cancel()
+        rerankJob = viewModelScope.launch {
+            val (candidates, routeStops) = withContext(Dispatchers.Default) {
+                val ranked = ranker.rank(dataset.segments, query)
+                ranked to routePlanner.plan(snapshot.origin, ranked)
+            }
+            val selected = if (preserveSelection) {
+                candidates.firstOrNull { it.segment.id == snapshot.selected?.segment?.id } ?: candidates.firstOrNull()
+            } else {
+                candidates.firstOrNull()
+            }
+            _uiState.update {
+                it.copy(
+                    candidates = candidates,
+                    routeStops = routeStops,
+                    selected = selected,
+                    lastUpdatedLabel = "${dataset.label} • live curb clock",
+                    error = if (candidates.isEmpty()) "No legal free curb segments found in this radius." else null
+                )
+            }
         }
     }
 }

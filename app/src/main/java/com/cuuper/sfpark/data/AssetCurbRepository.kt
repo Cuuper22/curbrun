@@ -2,13 +2,13 @@ package com.cuuper.sfpark.data
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import com.cuuper.sfpark.BuildConfig
 import com.cuuper.sfpark.domain.CurbSegment
 import com.cuuper.sfpark.domain.LatLng
 import com.cuuper.sfpark.domain.ParkingRule
 import com.cuuper.sfpark.domain.RuleKind
 import com.cuuper.sfpark.domain.TimeWindow
 import java.io.File
-import java.time.DayOfWeek
 
 data class CurbDataset(
     val segments: List<CurbSegment>,
@@ -25,14 +25,24 @@ class AssetCurbRepository(private val context: Context) {
             .let { if (it.segments.isEmpty()) CurbDataset(fallback, "Seed fallback") else it }
     }
 
+    /**
+     * Extracts the bundled SQLite asset once per app version. A small version
+     * marker makes the copy robust to APK compression (where the asset stream's
+     * reported length can differ from the on-disk file) and guarantees a fresh
+     * copy whenever a new build ships an updated database.
+     */
     private fun copyAssetDb(): File? {
         val assetName = "curbrun.sqlite"
         val out = File(context.noBackupFilesDir, assetName)
+        val marker = File(context.noBackupFilesDir, "$assetName.version")
+        val version = BuildConfig.VERSION_NAME
         return runCatching {
-            context.assets.open(assetName).use { input ->
-                if (!out.exists() || out.length() != input.available().toLong()) {
+            val cachedVersion = marker.takeIf { it.exists() }?.readText()
+            if (!out.exists() || cachedVersion != version) {
+                context.assets.open(assetName).use { input ->
                     out.outputStream().use { output -> input.copyTo(output) }
                 }
+                marker.writeText(version)
             }
             out
         }.getOrNull()
@@ -61,7 +71,7 @@ class AssetCurbRepository(private val context: Context) {
                         street = cursor.getString(1) ?: "SF curb",
                         crossStreet = cursor.getString(2) ?: "nearby",
                         center = LatLng(lat, lng),
-                        polyline = decodePolyline(cursor.getString(5), LatLng(lat, lng)),
+                        polyline = CurbAssetParsing.decodePolyline(cursor.getString(5), LatLng(lat, lng)),
                         parkableFeet = cursor.getInt(6).coerceAtLeast(8),
                         baseAvailability = cursor.getDouble(7),
                         trafficPressure = cursor.getDouble(8),
@@ -90,7 +100,7 @@ class AssetCurbRepository(private val context: Context) {
                 val kind = runCatching { RuleKind.valueOf(cursor.getString(1)) }.getOrDefault(RuleKind.FreeParking)
                 val window = if (!cursor.isNull(3) && !cursor.isNull(4)) {
                     TimeWindow(
-                        days = decodeDays(cursor.getString(2)),
+                        days = CurbAssetParsing.decodeDays(cursor.getString(2)),
                         startMinute = cursor.getInt(3),
                         endMinute = cursor.getInt(4)
                     )
@@ -103,30 +113,5 @@ class AssetCurbRepository(private val context: Context) {
             }
             return rules
         }
-    }
-
-    private fun decodePolyline(raw: String?, fallback: LatLng): List<LatLng> {
-        if (raw.isNullOrBlank()) return listOf(fallback)
-        val matches = Regex("""\[\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*]""").findAll(raw)
-        return matches.map {
-            val lng = it.groupValues[1].toDouble()
-            val lat = it.groupValues[2].toDouble()
-            LatLng(lat, lng)
-        }.toList().ifEmpty { listOf(fallback) }
-    }
-
-    private fun decodeDays(raw: String?): Set<DayOfWeek> {
-        if (raw.isNullOrBlank()) return DayOfWeek.entries.toSet()
-        val lower = raw.lowercase()
-        val pairs = mapOf(
-            "mon" to DayOfWeek.MONDAY,
-            "tue" to DayOfWeek.TUESDAY,
-            "wed" to DayOfWeek.WEDNESDAY,
-            "thu" to DayOfWeek.THURSDAY,
-            "fri" to DayOfWeek.FRIDAY,
-            "sat" to DayOfWeek.SATURDAY,
-            "sun" to DayOfWeek.SUNDAY
-        )
-        return pairs.filterKeys { it in lower }.values.toSet().ifEmpty { DayOfWeek.entries.toSet() }
     }
 }

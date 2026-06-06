@@ -10,3 +10,5 @@ data/*.sqlite-wal
 curbrun-screenshot*.png
 curbrun-crash-log*.txt
 ui-curbrun*.xml
+__pycache__/
+*.pyc

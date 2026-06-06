@@ -204,6 +204,7 @@ def insert_rule(
 
 def digital_curb_to_db(conn: sqlite3.Connection, limit: int | None) -> list[SegmentIndex]:
     index: list[SegmentIndex] = []
+    seen_ids: set[str] = set()
     for feature in paged_arcgis_features(SFMTA_DIGITAL_CURB, "IS_ACTIVE='Y'"):
         props = feature["properties"]
         coords = flatten_coords(feature.get("geometry") or {})
@@ -252,7 +253,13 @@ def digital_curb_to_db(conn: sqlite3.Connection, limit: int | None) -> list[Segm
             ),
         )
         insert_rule(conn, segment_id, kind, label, days, start_minute, end_minute, props.get("RULES_MAX_STAY"))
-        index.append(SegmentIndex(segment_id, lat, lng, street))
+        # A single CURB_ZONE_ID can appear across multiple features (one per
+        # schedule). The segment row is deduped by "insert or replace" and each
+        # feature still contributes a rule, so only index distinct segments to
+        # keep the spatial join and the reported segment count accurate.
+        if segment_id not in seen_ids:
+            seen_ids.add(segment_id)
+            index.append(SegmentIndex(segment_id, lat, lng, street))
         if limit and len(index) >= limit:
             break
     conn.commit()

@@ -173,98 +173,6 @@ private fun Header(state: ParkingUiState, onRefresh: () -> Unit, modifier: Modif
 }
 
 @Composable
-private fun CurbMap(state: ParkingUiState, modifier: Modifier = Modifier) {
-    val pulse by rememberInfiniteTransition(label = "map pulse").animateFloat(
-        initialValue = 0.0f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "pulse"
-    )
-    val selectedId = state.selected?.segment?.id
-    Canvas(modifier = modifier.background(Road)) {
-        drawRect(
-            Brush.radialGradient(
-                listOf(Color(0xFF43534A), Road),
-                center = Offset(size.width * 0.55f, size.height * 0.2f),
-                radius = size.maxDimension
-            )
-        )
-        val roadPaint = Color(0xFF51615B)
-        for (i in 0..9) {
-            val y = size.height * (0.12f + i * 0.09f)
-            drawLine(
-                color = roadPaint.copy(alpha = 0.34f),
-                start = Offset(0f, y),
-                end = Offset(size.width, y + ((i % 3) - 1) * 62f),
-                strokeWidth = 7f,
-                cap = StrokeCap.Round
-            )
-        }
-        for (i in 0..7) {
-            val x = size.width * (0.08f + i * 0.13f)
-            drawLine(
-                color = roadPaint.copy(alpha = 0.24f),
-                start = Offset(x, 0f),
-                end = Offset(x + ((i % 2) * 90f), size.height),
-                strokeWidth = 5f,
-                cap = StrokeCap.Round
-            )
-        }
-
-        val candidates = state.candidates.take(20)
-        val points = candidates.map { it.segment.center } + state.origin
-        val minLat = points.minOfOrNull { it.latitude } ?: state.origin.latitude
-        val maxLat = points.maxOfOrNull { it.latitude } ?: state.origin.latitude
-        val minLng = points.minOfOrNull { it.longitude } ?: state.origin.longitude
-        val maxLng = points.maxOfOrNull { it.longitude } ?: state.origin.longitude
-        fun project(lat: Double, lng: Double): Offset {
-            val lngSpan = max(0.0008, maxLng - minLng)
-            val latSpan = max(0.0008, maxLat - minLat)
-            val x = ((lng - minLng) / lngSpan).toFloat()
-            val y = (1.0 - ((lat - minLat) / latSpan)).toFloat()
-            return Offset(
-                x = size.width * (0.14f + x * 0.72f),
-                y = size.height * (0.16f + y * 0.58f)
-            )
-        }
-        candidates.forEachIndexed { index, candidate ->
-            val isSelected = candidate.segment.id == selectedId
-            val center = project(candidate.segment.center.latitude, candidate.segment.center.longitude)
-            val x = center.x
-            val y = center.y
-            val color = if (isSelected) Lime else Mint
-            val width = if (isSelected) 13f else 8f
-            drawLine(
-                color = color.copy(alpha = if (isSelected) 0.96f else 0.62f),
-                start = Offset(x - 56f, y + 24f),
-                end = Offset(x + 92f, y - 34f),
-                strokeWidth = width,
-                cap = StrokeCap.Round
-            )
-            if (isSelected) {
-                drawCircle(
-                    color = Lime.copy(alpha = 0.16f * (1f - pulse)),
-                    radius = 72f + pulse * 64f,
-                    center = Offset(x + 92f, y - 34f)
-                )
-                drawCircle(color = Lime, radius = 13f, center = Offset(x + 92f, y - 34f))
-            }
-        }
-        val origin = project(state.origin.latitude, state.origin.longitude)
-        drawCircle(
-            color = Color(0xFFEBFFF4).copy(alpha = 0.18f * (1f - pulse)),
-            radius = 80f + pulse * 80f,
-            center = origin
-        )
-        drawCircle(Color(0xFFEBFFF4), radius = 16f, center = origin)
-        drawCircle(Mint, radius = 7f, center = origin)
-    }
-}
-
-@Composable
 private fun CommandSheet(
     state: ParkingUiState,
     onDuration: (Double) -> Unit,
@@ -969,7 +877,7 @@ private fun PulseButton(label: String, active: Boolean, onClick: () -> Unit) {
 
 internal fun Double.formatMiles(): String = if (this < 0.1) "<0.1" else "%.1f".format(this)
 
-private fun Double.formatRadius(): String = if (this < 1.0) "%.1f mi".format(this) else "%.1f mi".format(this)
+private fun Double.formatRadius(): String = "%.1f mi".format(this)
 
 private fun Double.shorterRecoveryWindow(): Double = (this / 2.0).coerceAtLeast(0.5)
 

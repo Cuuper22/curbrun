@@ -66,7 +66,7 @@ class RuleEvaluator {
             }
         }
 
-        if (segment.parkedCarDensity > 0.72) risks += "Street View density suggests this block is usually tight."
+        if (segment.parkedCarDensity > 0.65) risks += "Modeled curb density suggests this block is usually tight."
         if (segment.trafficPressure > 0.7) risks += "High traffic pressure for this time/day."
         if (query.duration.toHours() >= 48) risks += "Long stay: re-check signs before leaving the car."
 

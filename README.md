@@ -30,6 +30,12 @@ It ranks streets by closest-first legal fit, then availability risk. The app is 
 .\gradlew.bat :app:assembleDebug
 ```
 
+On macOS/Linux:
+
+```bash
+./gradlew :app:assembleDebug
+```
+
 Debug APK:
 
 ```text
@@ -42,9 +48,9 @@ Full local verification:
 .\scripts\verify.ps1
 ```
 
-CI is configured in `.github/workflows/android.yml` to validate the bundled curb database, build the debug APK, run unit tests, run lint, and upload APK/lint/database artifacts.
+CI is configured in `.github/workflows/android.yml` to validate the bundled curb database, run the data-pipeline unit tests, build the debug APK, run unit tests, run lint, and upload APK/lint/database artifacts.
 
-The unit test suite covers legal-window blocking, paid-meter exclusion, radius filtering, closest-first ranking, availability tie-breaking, confidence tiers, curb-clock labels, route planning, and SF search anchors.
+The Kotlin unit test suite covers legal-window blocking, paid-meter exclusion, radius filtering, closest-first ranking, availability tie-breaking, confidence tiers, curb-clock labels, route planning, bundled-asset polyline/day parsing, and SF search anchors. A separate Python suite (`scripts/test_build_curb_db.py`) covers the data-pipeline clock/day/geometry parsers.
 
 ## Data Pipeline
 
@@ -54,7 +60,7 @@ Build a generated SQLite curb database:
 py scripts/build_curb_db.py --out app/src/main/assets/curbrun.sqlite --limit 5000 --overlay-limit 8000
 ```
 
-The bundled asset currently contains thousands of SFMTA curb policies and attached overlay rules. Street View-derived occupancy/capacity remains the next major model upgrade.
+The bundled asset currently contains thousands of SFMTA curb policies and attached overlay rules. Availability, traffic-pressure, and curb-density scores are transparent modeled heuristics derived from the density of nearby regulations, not measured occupancy, so they signal relative competition rather than a guaranteed open space. Real measured occupancy/capacity (for example Street View-derived) remains the next major model upgrade.
 
 ## Product Bar
 
