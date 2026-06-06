@@ -7,7 +7,7 @@ It ranks streets by closest-first legal fit, then availability risk. The app is 
 ## What Works Now
 
 - Kotlin native Android app with Jetpack Compose.
-- Animated premium UI with a real native OpenStreetMap surface, duration picker, radius control, vehicle chips, candidate cards, availability dials, route queue, and navigation handoff.
+- Bold high-contrast "night-ops" UI over a real native OpenStreetMap surface: a live curb-clock hero, duration presets, radius control, a vehicle toggle, candidate cards with availability rings/bars, a route sweep strip, and one-tap navigation handoff.
 - SF neighborhood quick-jump search anchors for destination-style parking searches around Mission, SoMa, Hayes, Marina, Sunset, and Richmond.
 - Saved parking preferences restore the last duration, search radius, vehicle profile, and chosen search area on relaunch.
 - Whole-window legality engine for `[now, now + N hours]`.
