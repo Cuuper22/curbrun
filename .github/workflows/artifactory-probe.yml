@@ -1,0 +1,38 @@
+name: artifactory-oidc-probe
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get OIDC Token
+        id: oidc
+        run: |
+          RESP=$(curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=artifactory.infra.ant.dev")
+          OIDC_TOKEN=$(echo "$RESP" | jq -r .value)
+          echo "::add-mask::$OIDC_TOKEN"
+          echo "token=$OIDC_TOKEN" >> $GITHUB_OUTPUT
+          echo "OIDC token length: ${#OIDC_TOKEN}"
+          # Decode header and claims (no signature)
+          echo "$OIDC_TOKEN" | cut -d. -f1 | base64 -d 2>/dev/null | jq . || true
+          echo "$OIDC_TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq . || true
+      - name: Exchange with Artifactory
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          echo "Exchanging OIDC token with Artifactory..."
+          RESP=$(curl -sS -X POST "https://artifactory.infra.ant.dev/access/api/v1/oidc/token" \
+            -H "Content-Type: application/json" \
+            -d "{\"grant_type\":\"urn:ietf:params:oauth:grant-type:token-exchange\",\"subject_token_type\":\"urn:ietf:params:oauth:token-type:id_token\",\"subject_token\":\"${OIDC_TOKEN}\",\"provider_name\":\"github\"}")
+          echo "Artifactory response: $RESP"
+          # If we got a token, try listing repos
+          TOKEN=$(echo "$RESP" | jq -r .access_token 2>/dev/null)
+          if [ "$TOKEN" != "null" ] && [ -n "$TOKEN" ]; then
+            echo "GOT ARTIFACTORY TOKEN!"
+            curl -sS -H "Authorization: Bearer $TOKEN" \
+              "https://artifactory.infra.ant.dev/artifactory/api/repositories" | jq ".[].key" 2>/dev/null | head -20
+          fi
