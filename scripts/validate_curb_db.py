@@ -188,6 +188,16 @@ def main() -> int:
     if bad_polylines:
         failures.append(f"Found invalid polyline JSON rows: {bad_polylines}")
 
+    segment_columns = {row[1] for row in cur.execute("pragma table_info(curb_segment)")}
+    if "measured_spaces" in segment_columns:
+        cap = cur.execute(
+            "select count(measured_spaces), min(measured_spaces), max(measured_spaces) from curb_segment"
+        ).fetchone()
+        stats["measured_spaces"] = {"count": cap[0], "min": cap[1], "max": cap[2]}
+        negative = cur.execute("select count(*) from curb_segment where measured_spaces < 0").fetchone()[0]
+        if negative:
+            failures.append(f"measured_spaces contains negative values: {negative}")
+
     metadata = {
         row["key"]: row["value"]
         for row in cur.execute("select key, value from build_metadata order by key")
@@ -195,6 +205,17 @@ def main() -> int:
     stats["metadata"] = metadata
     if "built_at_unix" not in metadata:
         failures.append("Missing build timestamp metadata")
+
+    declared_segments = metadata.get("digital_curb_segments")
+    if declared_segments is not None:
+        try:
+            if int(declared_segments) != segment_count:
+                failures.append(
+                    "digital_curb_segments metadata "
+                    f"({declared_segments}) does not match stored segment count ({segment_count})"
+                )
+        except ValueError:
+            failures.append(f"digital_curb_segments metadata is not an integer: {declared_segments!r}")
 
     report = {"ok": not failures, "failures": failures, "stats": stats}
     report_path.parent.mkdir(parents=True, exist_ok=True)

@@ -35,7 +35,8 @@ class CandidateRanker(
     }
 
     private fun computeAvailability(segment: CurbSegment, distanceMiles: Double): Double {
-        val raw = segment.baseAvailability -
+        val capacityBonus = segment.measuredSpaces?.let { min(0.08, it * 0.002) } ?: 0.0
+        val raw = segment.baseAvailability + capacityBonus -
             (segment.trafficPressure * 0.22) -
             (segment.parkedCarDensity * 0.28) -
             (max(0.0, distanceMiles - 0.2) * 0.04)

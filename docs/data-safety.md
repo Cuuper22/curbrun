@@ -28,3 +28,5 @@ These preferences stay on the device and are used to restore the app state on re
 ## Accuracy
 
 CurbRun filters for free legal curb candidates using bundled SFMTA-derived data and local timing rules, but curb signs, temporary restrictions, construction, driveways, hydrants, and enforcement changes can supersede the bundled data. Users should verify posted signs before leaving a vehicle.
+
+Availability, traffic-pressure, and curb-density scores (and the confidence tier derived from them) are modeled heuristics computed from the density of nearby parking regulations, not measured real-time occupancy. They indicate relative competition between candidates rather than a guaranteed open space. Per-blockface space counts come from the SFMTA on-street parking census (a periodic field survey) and reflect that survey's vintage.

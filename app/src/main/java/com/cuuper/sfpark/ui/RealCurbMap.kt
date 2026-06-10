@@ -64,17 +64,17 @@ fun RealCurbMap(
             drawRect(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xAA161A18),
+                        Color(0xCC070A09),
                         Color.Transparent,
                         Color.Transparent,
-                        Color(0x66161A18)
+                        Color(0x99070A09)
                     )
                 )
             )
             drawCircle(
-                color = Mint.copy(alpha = 0.14f),
-                radius = 110f,
-                center = Offset(size.width * 0.5f, size.height * 0.45f)
+                color = Volt.copy(alpha = 0.10f),
+                radius = 120f,
+                center = Offset(size.width * 0.5f, size.height * 0.40f)
             )
         }
     }
@@ -101,7 +101,7 @@ private fun MapView.applyCandidateOverlays(context: Context, state: ParkingUiSta
 
     if (state.routeStops.isNotEmpty()) {
         overlays += Polyline().apply {
-            outlinePaint.color = android.graphics.Color.rgb(202, 245, 107)
+            outlinePaint.color = android.graphics.Color.rgb(203, 255, 70)
             outlinePaint.strokeWidth = 5f
             outlinePaint.strokeCap = android.graphics.Paint.Cap.ROUND
             outlinePaint.pathEffect = android.graphics.DashPathEffect(floatArrayOf(18f, 14f), 0f)
@@ -133,9 +133,9 @@ private fun MapView.applyCandidateOverlays(context: Context, state: ParkingUiSta
 private fun ParkingCandidate.toPolyline(context: Context, selected: Boolean): Polyline {
     return Polyline().apply {
         outlinePaint.color = android.graphics.Color.rgb(
-            if (selected) 202 else 143,
-            if (selected) 245 else 242,
-            if (selected) 107 else 189
+            if (selected) 203 else 95,
+            if (selected) 255 else 231,
+            if (selected) 70 else 164
         )
         outlinePaint.strokeWidth = if (selected) 15f else 8f
         outlinePaint.strokeCap = android.graphics.Paint.Cap.ROUND

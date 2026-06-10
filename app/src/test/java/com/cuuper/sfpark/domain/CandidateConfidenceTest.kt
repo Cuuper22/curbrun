@@ -15,7 +15,7 @@ class CandidateConfidenceTest {
 
     @Test
     fun riskFactorsLowerConfidenceToCaution() {
-        val confidence = candidate(0.78, listOf("Street View density suggests this block is usually tight.")).confidenceSnapshot()
+        val confidence = candidate(0.78, listOf("Modeled curb density suggests this block is usually tight.")).confidenceSnapshot()
 
         assertEquals(CandidateConfidenceTier.Caution, confidence.tier)
     }

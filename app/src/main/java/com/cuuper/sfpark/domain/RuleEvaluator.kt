@@ -17,6 +17,7 @@ class RuleEvaluator {
 
         val estimatedSpaces = max(1, segment.parkableFeet / query.vehicleProfile.minimumFeet)
         reasons += "${segment.parkableFeet} ft usable curb, about $estimatedSpaces ${query.vehicleProfile.label.lowercase()} space(s)."
+        segment.measuredSpaces?.let { reasons += "SFMTA on-street census: about $it surveyed space(s) on this blockface." }
 
         for (rule in segment.rules) {
             val active = rule.window?.overlaps(query.start, end) ?: true
@@ -66,7 +67,7 @@ class RuleEvaluator {
             }
         }
 
-        if (segment.parkedCarDensity > 0.72) risks += "Street View density suggests this block is usually tight."
+        if (segment.parkedCarDensity > 0.65) risks += "Modeled curb density suggests this block is usually tight."
         if (segment.trafficPressure > 0.7) risks += "High traffic pressure for this time/day."
         if (query.duration.toHours() >= 48) risks += "Long stay: re-check signs before leaving the car."
 

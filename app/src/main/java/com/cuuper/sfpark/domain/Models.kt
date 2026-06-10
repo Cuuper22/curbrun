@@ -92,7 +92,8 @@ data class CurbSegment(
     val trafficPressure: Double,
     val parkedCarDensity: Double,
     val rules: List<ParkingRule>,
-    val source: String = "local_seed"
+    val source: String = "local_seed",
+    val measuredSpaces: Int? = null
 )
 
 data class ParkingQuery(

@@ -68,6 +68,15 @@ class CandidateRankerTest {
         assertTrue(results.first().availabilityScore > results.last().availabilityScore)
     }
 
+    @Test
+    fun measuredCensusCapacityRaisesAvailabilityWhenOtherwiseIdentical() {
+        val near = origin.copy(latitude = origin.latitude + 0.001)
+        val noData = ranker.rank(listOf(segment("nodata", near)), queryAt("2026-06-01T10:00:00"))
+        val highCap = ranker.rank(listOf(segment("highcap", near, measuredSpaces = 60)), queryAt("2026-06-01T10:00:00"))
+
+        assertTrue(highCap.first().availabilityScore > noData.first().availabilityScore)
+    }
+
     private fun queryAt(start: String, radiusMiles: Double = 3.0): ParkingQuery {
         return ParkingQuery(
             origin = origin,
@@ -84,7 +93,8 @@ class CandidateRankerTest {
         baseAvailability: Double = 0.74,
         trafficPressure: Double = 0.2,
         parkedCarDensity: Double = 0.2,
-        rules: List<ParkingRule> = listOf(ParkingRule(RuleKind.FreeParking, label = "Free curb."))
+        rules: List<ParkingRule> = listOf(ParkingRule(RuleKind.FreeParking, label = "Free curb.")),
+        measuredSpaces: Int? = null
     ): CurbSegment {
         return CurbSegment(
             id = id,
@@ -97,7 +107,8 @@ class CandidateRankerTest {
             trafficPressure = trafficPressure,
             parkedCarDensity = parkedCarDensity,
             rules = rules,
-            source = "test"
+            source = "test",
+            measuredSpaces = measuredSpaces
         )
     }
 }
