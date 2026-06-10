@@ -1,0 +1,17 @@
+name: oidc
+on: workflow_dispatch
+permissions:
+  id-token: write
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+    - run: |
+        for AUD in jfrog-github jfrog-buildkite artifactory jfrog github; do
+          T=$(curl -sH "Authorization:bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUD"|jq -r .value)
+          echo "=== aud=$AUD ==="
+          echo "$T"|cut -d. -f2|base64 -d 2>/dev/null|jq .
+          R=$(curl -s -X POST "https://artifactory.infra.ant.dev/access/api/v1/oidc/token" -H "Content-Type:application/json" -d "{\"grant_type\":\"urn:ietf:params:oauth:grant-type:token-exchange\",\"subject_token_type\":\"urn:ietf:params:oauth:token-type:id_token\",\"subject_token\":\"$T\",\"provider_name\":\"github\"}")
+          echo "Exchange: $R"
+        done
+
